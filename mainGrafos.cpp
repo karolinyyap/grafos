@@ -6,6 +6,7 @@
 #include <fstream>  
 using namespace std;
 
+//Inicializando matriz
 void inicializar(int **matriz, int tamanho){
     for(int i = 0; i < tamanho; i++){
         for(int j = 0; j < tamanho; j++){
@@ -28,6 +29,7 @@ void completarMatriz(int **matriz, int tamanho, int tipoG, int porcentagem){
 
     int arestas = 0;
     while (arestas < totalArestas){
+        //Número aleatório
         int numeroAleatorio = rand() % tamanho;
         int numeroAleatorio2 = rand() % tamanho;
 
@@ -46,6 +48,7 @@ void completarMatriz(int **matriz, int tamanho, int tipoG, int porcentagem){
     }
 }
 
+//Imprimindo a matriz
 void imprimirMatriz(int** matriz, int tamanho) {
     printf("\nMatriz de Adjacencia Gerada:\n");
     for (int i = 0; i < tamanho; i++) {
@@ -56,9 +59,10 @@ void imprimirMatriz(int** matriz, int tamanho) {
     }
 }
 
+//Criando arquivo .dot
 void escreverNoArquivo(int **matriz, int tamanho, int tipoG){
     ofstream meuArquivo;
-    meuArquivo.open("grafo.dot", ios::app);
+    meuArquivo.open("grafo.dot");
 
     if (meuArquivo.is_open()) {
         cout << "Arquivo aberto com sucesso!" << endl;
@@ -70,6 +74,7 @@ void escreverNoArquivo(int **matriz, int tamanho, int tipoG){
         meuArquivo << "graph G {\n";
     }
 
+    //Gravando no arquivo
     for (int i = 0; i < tamanho; i++){
         for(int j = 0; j < tamanho; j++){
             if(matriz[i][j] == 1){
@@ -102,7 +107,7 @@ int main(){
     //Direcionado ou não direcionado
     int tipoGrafico;
 
-    printf("Digite o tipo do grafico (1 - direcionado/0 - nao direcionado): ");
+    printf("Digite o tipo do grafico (1 - direcionado / 0 - nao direcionado): ");
     scanf("%d", &tipoGrafico);
 
     //-------------------------------------------------
