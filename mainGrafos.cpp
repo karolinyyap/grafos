@@ -22,7 +22,7 @@ void completarMatriz(int **matriz, int tamanho, int tipoG, int porcentagem){
     if (tipoG == 1) {
         qtdeArestas = tamanho * (tamanho - 1); //grafos direcionais
     } else {
-        qtdeArestas = (tamanho * (tamanho - 1))/2; //grafos não-direcionais
+        qtdeArestas = (tamanho * (tamanho - 1))/ 2; //grafos não-direcionais
     }
 
     int totalArestas = (qtdeArestas * porcentagem) / 100;
@@ -70,29 +70,95 @@ void escreverNoArquivo(int **matriz, int tamanho, int tipoG){
 
     if (tipoG == 1){
         meuArquivo << "digraph G {\n";
+        //Gravando no arquivo
+        for(int i = 0; i < tamanho; i++){
+            meuArquivo <<  i << ";\n";
+        }
+        for (int i = 0; i < tamanho; i++){
+            for(int j = 0; j < tamanho; j++){
+                if(matriz[i][j] == 1){
+                    meuArquivo << " " << i << "->" << j << ";\n";
+                }
+            }
+        }
+
     } else {
         meuArquivo << "graph G {\n";
-    }
-
-    //Gravando no arquivo
-    for (int i = 0; i < tamanho; i++){
-        for(int j = 0; j < tamanho; j++){
-            if(matriz[i][j] == 1){
-                if(tipoG == 1){
-                    meuArquivo << " " << i << "->" << j << ";\n";
-                } else {
+        //Gravando no arquivo
+        for(int i = 0; i < tamanho; i++){
+            meuArquivo <<  i << ";\n";
+        }
+        for (int i = 0; i < tamanho; i++){
+            for(int j = i+1; j < tamanho; j++){
+                if(matriz[i][j] == 1){
                     meuArquivo << "  " << i << " -- " << j << ";\n";
                 }
             }
         }
     }
 
+    
     meuArquivo << "}\n";
     meuArquivo.close();
 }
 
-void conexo(){
+void ehConexo(int **matriz, int tamanho){
+    bool *visitado = new bool[tamanho];
+
+    for (int i = 0; i < tamanho; i++) {
+        visitado[i] = false;
+    }
+
+    visitado[0] = true;
+    for (int i = 0; i < tamanho; i++){
+        if(visitado[i] == true){
+            for(int j = 0; j < tamanho; j++){
+                if(matriz[i][j] == 1){
+                    visitado[j] = true;
+                }
+            }
+        }
+    }
+
+    bool conexo = true;
+    for(int i = 0; i < tamanho; i++){
+        if(visitado[i] == false){
+            conexo = false;
+            break;
+        }
+    }
+
+    if(conexo){
+        cout << "\nEh conexo!!" << endl;
+    } else {
+        cout << "\nNao eh conexo!!" << endl;
+    }
+}
+
+void lerArquivoDot(const char* nomeArquivo, int tipoG, int **matriz){
+    FILE* arquivo = fopen(nomeArquivo, "r");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo %s\n", nomeArquivo);
+        return;
+    }
+
+    int origem, destino;
+
+    while (!feof(arquivo)) {
+        if(tipoG ==  1){
+            if(fscanf(arquivo, "%d -> %d", &origem, &destino) == 2){
+                matriz[origem][destino] = 1;
+            }
+        } else {
+            if(fscanf(arquivo, "%d -- %d", &origem, &destino) == 2){
+                matriz[origem][destino] = 1;
+                matriz[destino][origem] = 1;
+            }
+        }
+        
+    }
     
+    fclose(arquivo);
 }
 
 int main(){
@@ -124,11 +190,13 @@ int main(){
     for (int i = 0; i < linhas; ++i) {
         matriz_dinamica[i] = new int[colunas];
     }
-    
+    //fazer switch case
     inicializar(matriz_dinamica, tamMatriz);
     completarMatriz(matriz_dinamica, tamMatriz, tipoGrafico, qtdePreenchida);
     imprimirMatriz(matriz_dinamica, tamMatriz);
     escreverNoArquivo(matriz_dinamica, tamMatriz, tipoGrafico);
+    ehConexo(matriz_dinamica, tamMatriz);
+    //lerArquivoDot("../arquivo.txt", tipoGrafico, matriz_dinamica);
 
     return 0;
 }
