@@ -6,26 +6,93 @@
 #include <fstream>  
 using namespace std;
 
-//Inicializando matriz
-void inicializar(int **matriz, int tamanho){
+struct Vertice;
+struct Vizinho;
+
+struct Vertice {
+    int id;
+    Vizinho *vizinhos;
+};
+
+struct Vizinho {
+    Vertice *vizinho;
+    Vizinho *proximoVizinho;
+};
+
+Vertice *grafo;
+
+void inicializa(int tamanho){
+    grafo = new Vertice[tamanho];
     for(int i = 0; i < tamanho; i++){
-        for(int j = 0; j < tamanho; j++){
-            matriz[i][j] = 0;
-        }
+        grafo[i].id = i;
+        grafo[i].vizinhos = NULL;
     }
 }
 
-void completarMatriz(int **matriz, int tamanho, int tipoG, int porcentagem){
+bool vizinhoExiste(Vertice *a, Vertice *b) {
+    Vizinho *atual = a->vizinhos;
+    while (atual != NULL) {
+        if (atual->vizinho == b) {
+            return true;
+        }
+        atual = atual->proximoVizinho;
+    }
+    return false; 
+}
+
+void adicionaVizinho(Vertice *a, Vertice *b, int tipoGrafico){
+
+    if (a == NULL || b == NULL){
+        return;
+    }
+
+    //Direcionado
+    Vizinho *temp = new Vizinho;
+    temp->vizinho = b;
+    temp->proximoVizinho = NULL;
+
+    if(a->vizinhos == NULL){
+        a->vizinhos = temp;
+    } else {
+        Vizinho *aux;
+        aux = a->vizinhos;
+        while (aux->proximoVizinho != NULL){
+            aux = aux->proximoVizinho;
+        }
+        aux->proximoVizinho = temp;
+    }
+
+    if(tipoGrafico == 0) {
+        //Não direcionado
+        Vizinho *aux2;
+        Vizinho *temp2 = new Vizinho;
+        temp2->vizinho = a;
+        temp2->proximoVizinho = NULL;
+
+        if(!vizinhoExiste(b, a)){
+            if (b->vizinhos == NULL){
+                b->vizinhos = temp2;
+            } else {
+                aux2 = b->vizinhos;
+                while (aux2->proximoVizinho != NULL){
+                    aux2 = aux2->proximoVizinho;
+                }
+                aux2->proximoVizinho = temp2;
+            }
+        } 
+    }
+}
 
 
+void criarListaAdjacencia(int tamanho, int tipoGrafico, int preenchido){
     int qtdeArestas = 0;
-    if (tipoG == 1) {
+    if (tipoGrafico == 1) {
         qtdeArestas = tamanho * (tamanho - 1); //grafos direcionais
     } else {
         qtdeArestas = (tamanho * (tamanho - 1))/ 2; //grafos não-direcionais
     }
 
-    int totalArestas = (qtdeArestas * porcentagem) / 100;
+    int totalArestas = (qtdeArestas * preenchido) / 100;
 
     int arestas = 0;
     while (arestas < totalArestas){
@@ -36,31 +103,37 @@ void completarMatriz(int **matriz, int tamanho, int tipoG, int porcentagem){
         int i = numeroAleatorio;
         int j = numeroAleatorio2;
 
-        if(i != j && matriz[i][j] == 0){           
-            matriz[i][j] = 1;
-            if (tipoG == 0){
-                matriz[j][i] = 1;
-            }
+        if(i != j && !vizinhoExiste(&grafo[i], &grafo[j])){           
+            adicionaVizinho(&grafo[i], &grafo[j], tipoGrafico);
             arestas++;
         }
-        
-
     }
 }
 
-//Imprimindo a matriz
-void imprimirMatriz(int** matriz, int tamanho) {
-    printf("\nMatriz de Adjacencia Gerada:\n");
+void imprimirGrafo(int tamanho, int tipoGrafico) {
+    if (tipoGrafico == 1) {
+        cout << "Grafo Direcional:" << endl;
+    } else {
+        cout << "Grafo Nao-Direcional:" << endl;
+    }
+
     for (int i = 0; i < tamanho; i++) {
-        for (int j = 0; j < tamanho; j++) {
-            printf("%d ", matriz[i][j]);
+        cout << "Vertice " << grafo[i].id << ":";
+        Vizinho* aux = grafo[i].vizinhos;
+        if (aux == NULL) {
+            cout << " (nenhum vizinho)";
+        } else {
+            while (aux != NULL) {
+                cout << " -> " << aux->vizinho->id;
+                aux = aux->proximoVizinho;
+            }
         }
-        printf("\n");
+        cout << endl;
     }
 }
 
 //Criando arquivo .dot
-void escreverNoArquivo(int **matriz, int tamanho, int tipoG){
+void escreverNoArquivo(int tamanho, int tipoG){
     ofstream meuArquivo;
     meuArquivo.open("grafo.dot");
 
@@ -69,40 +142,46 @@ void escreverNoArquivo(int **matriz, int tamanho, int tipoG){
     }
 
     if (tipoG == 1){
+        //Direcional
         meuArquivo << "digraph G {\n";
         //Gravando no arquivo
         for(int i = 0; i < tamanho; i++){
-            meuArquivo <<  i << ";\n";
+            meuArquivo <<  i  << ";\n";
         }
         for (int i = 0; i < tamanho; i++){
-            for(int j = 0; j < tamanho; j++){
-                if(matriz[i][j] == 1){
-                    meuArquivo << " " << i << "->" << j << ";\n";
-                }
+            Vizinho *aux = grafo[i].vizinhos;
+            while (aux != NULL){
+                meuArquivo << " " << i << "->" << aux->vizinho->id << ";\n";
+                aux = aux->proximoVizinho;
             }
         }
 
+
     } else {
+        //Não-direcional
         meuArquivo << "graph G {\n";
         //Gravando no arquivo
         for(int i = 0; i < tamanho; i++){
             meuArquivo <<  i << ";\n";
-        }
+        } 
         for (int i = 0; i < tamanho; i++){
-            for(int j = i+1; j < tamanho; j++){
-                if(matriz[i][j] == 1){
-                    meuArquivo << "  " << i << " -- " << j << ";\n";
+            Vizinho *aux = grafo[i].vizinhos;
+            while (aux != NULL){
+                int j = aux->vizinho->id;
+                if (i < j) {
+                    meuArquivo << " " << i << "--" << j << ";\n";
                 }
+                aux = aux->proximoVizinho;
             }
         }
+        
     }
 
-    
     meuArquivo << "}\n";
     meuArquivo.close();
 }
 
-void ehConexo(int **matriz, int tamanho, int tipoG){
+/*void ehConexo(int tamanho, int tipoG){
     bool *visitado = new bool[tamanho];
 
     for (int i = 0; i < tamanho; i++) {
@@ -113,10 +192,12 @@ void ehConexo(int **matriz, int tamanho, int tipoG){
         visitado[0] = true;
         for (int i = 0; i < tamanho; i++){
             if(visitado[i] == true){
-                for(int j = 0; j < tamanho; j++){
-                    if(matriz[i][j] == 1){
-                        visitado[j] = true;
+                Vizinho *aux = grafo[i].vizinhos;
+                while (aux != NULL){
+                    if (){
+                        visitado[i] = true;
                     }
+                    aux = aux->proximoVizinho;
                 }
             }
         }
@@ -149,9 +230,9 @@ void ehConexo(int **matriz, int tamanho, int tipoG){
     } else {
         cout << "\nNao eh conexo!!" << endl;
     }
-}
+}*/
 
-void lerArquivoDot(const char* nomeArquivo, int tipoG, int **matriz){
+void lerArquivoDot(const char* nomeArquivo, int tipoG){
     FILE* arquivo = fopen(nomeArquivo, "r");
     if (arquivo == NULL) {
         printf("Erro ao abrir o arquivo %s\n", nomeArquivo);
@@ -164,12 +245,12 @@ void lerArquivoDot(const char* nomeArquivo, int tipoG, int **matriz){
     while (fgets(linha, sizeof(linha), arquivo)) {
         if(tipoG ==  1){
             if(fscanf(arquivo, "%d -> %d", &origem, &destino) == 2){
-                matriz[origem][destino] = 1;
+                adicionaVizinho(&grafo[origem], &grafo[destino], 1);
             }
         } else {
             if(fscanf(arquivo, "%d -- %d", &origem, &destino) == 2){
-                matriz[origem][destino] = 1;
-                matriz[destino][origem] = 1;
+                adicionaVizinho(&grafo[origem], &grafo[destino], 0);
+                adicionaVizinho(&grafo[destino], &grafo[origem], 0);
             }
         }
         
@@ -180,12 +261,12 @@ void lerArquivoDot(const char* nomeArquivo, int tipoG, int **matriz){
 
 int main(){
     srand(time(NULL));
-    int tamMatriz;
+    int tamLista;
     int opcao, qtdePreenchida;
 
     //Tamanho da matriz
-    printf("Digite o tamanho da matriz: ");
-    scanf("%d", &tamMatriz);
+    printf("Digite o tamanho da lista: ");
+    scanf("%d", &tamLista);
 
     //-------------------------------------------------
     //Direcionado ou não direcionado
@@ -194,19 +275,10 @@ int main(){
     printf("Digite o tipo do grafico (1 - direcionado / 0 - nao direcionado): ");
     scanf("%d", &tipoGrafico);
     
-    int linhas = tamMatriz;
-    int colunas = tamMatriz;
-
-    int** matriz_dinamica = new int*[linhas];
-
-    for (int i = 0; i < linhas; ++i) {
-        matriz_dinamica[i] = new int[colunas];
-    }
-    
     do {
         printf("\n===== MENU =====\n");
         printf("1 - Gerar grafo aleatorio\n");
-        printf("2 - Imprimir matriz de adjacencia\n");
+        printf("2 - Imprimir lista de adjacencia\n");
         printf("3 - Salvar grafo em arquivo .dot\n");
         printf("4 - Ler grafo do arquivo .dot\n");
         printf("5 - Verificar se eh conexo\n");
@@ -218,27 +290,26 @@ int main(){
             case 1:
                 printf("Digite a porcentagem de arestas: ");
                 scanf("%d", &qtdePreenchida);
-                inicializar(matriz_dinamica, tamMatriz);
-                completarMatriz(matriz_dinamica, tamMatriz, tipoGrafico, qtdePreenchida);
+                inicializa(tamLista);
+                criarListaAdjacencia(tamLista, tipoGrafico, qtdePreenchida);
                 printf("Grafo gerado com sucesso!\n");
                 break;
 
             case 2:
-                imprimirMatriz(matriz_dinamica, tamMatriz);
+                imprimirGrafo(tamLista, tipoGrafico);
                 break;
 
             case 3:
-                escreverNoArquivo(matriz_dinamica, tamMatriz, tipoGrafico);
+                escreverNoArquivo(tamLista, tipoGrafico);
                 break;
 
             case 4:
-                //inicializar(matriz_dinamica, tamMatriz);
-                //lerArquivoDot("grafo.dot", tipoGrafico, matriz_dinamica);
-                //printf("Grafo lido do arquivo com sucesso!\n");
+                lerArquivoDot("grafo.dot", tipoGrafico);
+                printf("Grafo lido do arquivo com sucesso!\n");
                 break;
 
             case 5:
-                ehConexo(matriz_dinamica, tamMatriz, tipoGrafico);
+                //ehConexo(matriz_dinamica, tamMatriz, tipoGrafico);
                 break;
 
             case 0:
