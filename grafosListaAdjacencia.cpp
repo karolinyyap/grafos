@@ -181,7 +181,7 @@ void escreverNoArquivo(int tamanho, int tipoG){
     meuArquivo.close();
 }
 
-/*void ehConexo(int tamanho, int tipoG){
+void ehConexo(int tamanho, int tipoG){
     bool *visitado = new bool[tamanho];
 
     for (int i = 0; i < tamanho; i++) {
@@ -194,26 +194,29 @@ void escreverNoArquivo(int tamanho, int tipoG){
             if(visitado[i] == true){
                 Vizinho *aux = grafo[i].vizinhos;
                 while (aux != NULL){
-                    if (){
-                        visitado[i] = true;
+                    int vizinho = aux->vizinho->id;
+                    if (!visitado[vizinho]){
+                        visitado[vizinho] = true;
                     }
                     aux = aux->proximoVizinho;
                 }
             }
         }
     } else {
-        for (int i = 0; i < tamanho; i++){
-            visitado[0] = true;
-            for (int j = 0; j < tamanho; j++){
-                if(visitado[j] == true){
-                    for(int k = 0; k < tamanho; k++){
-                        if(matriz[j][k] == 1){
-                            visitado[k] = true;
+        visitado[0] = true;
+        for(int j = 0; j < tamanho; j++){
+            for (int i = 0; i < tamanho; i++){
+                if(visitado[i] == true){
+                    Vizinho *aux = grafo[i].vizinhos;
+                    while (aux != NULL){
+                        int vizinho = aux->vizinho->id;
+                        if (!visitado[vizinho]){
+                            visitado[vizinho] = true;
                         }
+                        aux = aux->proximoVizinho;
                     }
                 }
             }
-        }
     }
     
 
@@ -230,7 +233,8 @@ void escreverNoArquivo(int tamanho, int tipoG){
     } else {
         cout << "\nNao eh conexo!!" << endl;
     }
-}*/
+    }
+}
 
 void lerArquivoDot(const char* nomeArquivo, int tipoG){
     FILE* arquivo = fopen(nomeArquivo, "r");
@@ -309,7 +313,7 @@ int main(){
                 break;
 
             case 5:
-                //ehConexo(matriz_dinamica, tamMatriz, tipoGrafico);
+                ehConexo(tamLista, tipoGrafico);
                 break;
 
             case 0:
