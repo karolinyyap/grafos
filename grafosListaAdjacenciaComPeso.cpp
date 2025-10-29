@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <cstring>
 #include <random>
 #include <iostream> 
 #include <fstream>  
@@ -15,17 +16,25 @@ struct Vertice {
 };
 
 struct Vizinho {
+    int peso;
     Vertice *vizinho;
     Vizinho *proximoVizinho;
 };
 
 Vertice *grafo;
+Vertice *arvore;
 
 void inicializa(int tamanho){
     grafo = new Vertice[tamanho];
     for(int i = 0; i < tamanho; i++){
         grafo[i].id = i;
         grafo[i].vizinhos = NULL;
+    }
+
+    arvore = new Vertice[tamanho];
+    for(int i = 0; i < tamanho; i++){
+        arvore[i].id = i;
+        arvore[i].vizinhos = NULL;
     }
 }
 
@@ -40,6 +49,10 @@ bool vizinhoExiste(Vertice *a, Vertice *b) {
     return false; 
 }
 
+int pesoAleatorio(){
+    return (rand() % 10) + 1;
+}
+
 void adicionaVizinho(Vertice *a, Vertice *b, int tipoGrafico){
 
     if (a == NULL || b == NULL){
@@ -49,6 +62,7 @@ void adicionaVizinho(Vertice *a, Vertice *b, int tipoGrafico){
     //Direcionado
     Vizinho *temp = new Vizinho;
     temp->vizinho = b;
+    temp->peso = pesoAleatorio(); 
     temp->proximoVizinho = NULL;
 
     if(a->vizinhos == NULL){
@@ -67,6 +81,7 @@ void adicionaVizinho(Vertice *a, Vertice *b, int tipoGrafico){
         Vizinho *aux2;
         Vizinho *temp2 = new Vizinho;
         temp2->vizinho = a;
+        temp2->peso = temp->peso;
         temp2->proximoVizinho = NULL;
 
         if(!vizinhoExiste(b, a)){
@@ -82,7 +97,6 @@ void adicionaVizinho(Vertice *a, Vertice *b, int tipoGrafico){
         } 
     }
 }
-
 
 void criarListaAdjacencia(int tamanho, int tipoGrafico, int preenchido){
     int qtdeArestas = 0;
@@ -125,6 +139,7 @@ void imprimirGrafo(int tamanho, int tipoGrafico) {
         } else {
             while (aux != NULL) {
                 cout << " -> " << aux->vizinho->id;
+                cout << " (Peso: " << aux->peso << ") ";
                 aux = aux->proximoVizinho;
             }
         }
@@ -151,7 +166,9 @@ void escreverNoArquivo(int tamanho, int tipoG){
         for (int i = 0; i < tamanho; i++){
             Vizinho *aux = grafo[i].vizinhos;
             while (aux != NULL){
-                meuArquivo << " " << i << "->" << aux->vizinho->id << ";\n";
+                meuArquivo << " " << i << "->" << aux->vizinho->id;
+                meuArquivo << " [label=" << aux->peso << ", weight=" << aux->peso << "];";
+                meuArquivo << "\n";
                 aux = aux->proximoVizinho;
             }
         }
@@ -169,7 +186,9 @@ void escreverNoArquivo(int tamanho, int tipoG){
             while (aux != NULL){
                 int j = aux->vizinho->id;
                 if (i < j) {
-                    meuArquivo << " " << i << "--" << j << ";\n";
+                    meuArquivo << " " << i << "--" << j;
+                    meuArquivo << " [label=" << aux->peso << ", weight=" << aux->peso << "];";
+                    meuArquivo << "\n";
                 }
                 aux = aux->proximoVizinho;
             }
@@ -179,6 +198,51 @@ void escreverNoArquivo(int tamanho, int tipoG){
 
     meuArquivo << "}\n";
     meuArquivo.close();
+}
+
+void arvoreGeradoraMinima(int tamanho){
+    bool *visitado = new bool[tamanho];
+    int menorPeso = 999;
+    visitado[0] = true;
+
+    for (int i = 0; i < tamanho; i++) {
+        visitado[i] = false;
+    }
+
+    for (int i = 0; i < tamanho; i++){
+        if(!visitado[i]){
+            Vizinho *p = grafo->vizinhos;
+            while (p != NULL){
+                if(!visitado[p->vizinho->id] && p->peso < menorPeso){
+                    menorPeso = p->peso;
+                    visitado[i] = true;
+                }
+                p = p->proximoVizinho;
+            }
+        }
+    }
+
+    ofstream arquivo("arvore_minima.dot");
+    arquivo << "graph G {\n";
+    for(int i = 0; i < tamanho; i++){
+            arquivo <<  i  << ";\n";
+    }
+    for (int i = 0; i < tamanho; i++) {
+        Vizinho* aux = arvore[i].vizinhos;
+        while (aux != NULL) {
+            int j = aux->vizinho->id;
+            if (i < j) { 
+                arquivo << " " << i << "--" << j;
+                arquivo << " [label=" << aux->peso << ", weight=" << aux->peso << "];";
+                arquivo << "\n";
+            }
+            aux = aux->proximoVizinho;
+        }
+    }
+    arquivo << "}\n";
+    arquivo.close();
+
+    cout << "Arvore geradora minima criada!\n";
 }
 
 void ehConexo(int tamanho, int tipoG){
@@ -236,8 +300,8 @@ void ehConexo(int tamanho, int tipoG){
     }
 }
 
-//Melhorar
-void lerArquivoDot(const char* nomeArquivo, int tipoG){
+
+void lerArquivoDot(const char* nomeArquivo) {
     FILE* arquivo = fopen(nomeArquivo, "r");
     if (arquivo == NULL) {
         printf("Erro ao abrir o arquivo %s\n", nomeArquivo);
@@ -246,23 +310,38 @@ void lerArquivoDot(const char* nomeArquivo, int tipoG){
 
     char linha[100];
     int origem, destino;
+    int tipoG = -1; 
 
     while (fgets(linha, sizeof(linha), arquivo)) {
-        if(tipoG ==  1){
-            if(fscanf(arquivo, "%d -> %d", &origem, &destino) == 2){
+        linha[strcspn(linha, "\n")] = 0;
+
+        if (tipoG == -1) {
+            char primeiraPalavra[20];
+            sscanf(linha, "%s", primeiraPalavra);
+
+            if (strcmp(primeiraPalavra, "digraph") == 0){
+                tipoG = 1;
+            } else if (strcmp(primeiraPalavra, "graph") == 0){
+                tipoG = 0;
+            }
+            continue; 
+        }
+
+        if (tipoG == 1) { // direcionado
+            if (sscanf(linha, " %d -> %d", &origem, &destino) == 2) {
                 adicionaVizinho(&grafo[origem], &grafo[destino], 1);
             }
-        } else {
-            if(fscanf(arquivo, "%d -- %d", &origem, &destino) == 2){
+        } else if (tipoG == 0) { // não direcionado
+            if (sscanf(linha, " %d -- %d", &origem, &destino) == 2) {
                 adicionaVizinho(&grafo[origem], &grafo[destino], 0);
                 adicionaVizinho(&grafo[destino], &grafo[origem], 0);
             }
         }
-        
     }
-    
+
     fclose(arquivo);
 }
+
 
 int main(){
     srand(time(NULL));
@@ -287,6 +366,7 @@ int main(){
         printf("3 - Salvar grafo em arquivo .dot\n");
         printf("4 - Ler grafo do arquivo .dot\n");
         printf("5 - Verificar se eh conexo\n");
+        printf("6 - Criar arvore geradora minima\n");
         printf("0 - Sair\n");
         printf("Escolha uma opcao: ");
         scanf("%d", &opcao);
@@ -309,12 +389,16 @@ int main(){
                 break;
 
             case 4:
-                lerArquivoDot("grafo.dot", tipoGrafico);
+                lerArquivoDot("grafo.dot");
                 printf("Grafo lido do arquivo com sucesso!\n");
                 break;
 
             case 5:
                 ehConexo(tamLista, tipoGrafico);
+                break;
+
+            case 6:
+                arvoreGeradoraMinima(tamLista);
                 break;
 
             case 0:
