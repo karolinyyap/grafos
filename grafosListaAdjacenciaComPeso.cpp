@@ -98,6 +98,39 @@ void adicionaVizinho(Vertice *a, Vertice *b, int tipoGrafico){
     }
 }
 
+void adicionaVizinhoComPeso(Vertice *a, Vertice *b, int peso) {
+    Vizinho *novo = new Vizinho;
+    novo->vizinho = b;
+    novo->peso = peso;
+    novo->proximoVizinho = NULL;
+
+    if (a->vizinhos == NULL) {
+        a->vizinhos = novo;
+    } else {
+        Vizinho *aux = a->vizinhos;
+        while (aux->proximoVizinho != NULL) {
+            aux = aux->proximoVizinho;
+        }
+        aux->proximoVizinho = novo;
+    }
+
+    Vizinho *novo2 = new Vizinho;
+    novo2->vizinho = a;
+    novo2->peso = peso;
+    novo2->proximoVizinho = NULL;
+
+    if (b->vizinhos == NULL) {
+        b->vizinhos = novo2;
+    } else {
+        Vizinho *aux2 = b->vizinhos;
+        while (aux2->proximoVizinho != NULL) {
+            aux2 = aux2->proximoVizinho;
+        }
+        aux2->proximoVizinho = novo2;
+    }
+}
+
+
 void criarListaAdjacencia(int tamanho, int tipoGrafico, int preenchido){
     int qtdeArestas = 0;
     if (tipoGrafico == 1) {
@@ -202,39 +235,46 @@ void escreverNoArquivo(int tamanho, int tipoG){
 
 void arvoreGeradoraMinima(int tamanho){
     bool *visitado = new bool[tamanho];
-    int menorPeso = 999;
-    visitado[0] = true;
 
     for (int i = 0; i < tamanho; i++) {
         visitado[i] = false;
     }
 
-    for (int i = 0; i < tamanho; i++){
-        if(!visitado[i]){
-            Vizinho *p = grafo->vizinhos;
-            while (p != NULL){
-                if(!visitado[p->vizinho->id] && p->peso < menorPeso){
-                    menorPeso = p->peso;
-                    visitado[i] = true;
+    visitado[0] = true;
+    for(int j = 0; j < tamanho - 1; j++){
+        int menorPeso = 999;
+        int x = -1, y = -1;
+        for (int i = 0; i < tamanho; i++){
+            if(visitado[i]){
+                Vizinho *p = grafo[i].vizinhos;
+                while (p != NULL){
+                    if(!visitado[p->vizinho->id] && p->peso < menorPeso){
+                        menorPeso = p->peso;
+
+                        x = i;
+                        y = p->vizinho->id;
+                    }
+                    p = p->proximoVizinho;
                 }
-                p = p->proximoVizinho;
             }
         }
+
+        adicionaVizinhoComPeso(&arvore[x], &arvore[y], menorPeso);
+        visitado[y] = true;
     }
 
     ofstream arquivo("arvore_minima.dot");
     arquivo << "graph G {\n";
-    for(int i = 0; i < tamanho; i++){
-            arquivo <<  i  << ";\n";
+    for (int i = 0; i < tamanho; i++) {
+        arquivo << " " << i << ";\n";
     }
     for (int i = 0; i < tamanho; i++) {
         Vizinho* aux = arvore[i].vizinhos;
         while (aux != NULL) {
             int j = aux->vizinho->id;
-            if (i < j) { 
-                arquivo << " " << i << "--" << j;
-                arquivo << " [label=" << aux->peso << ", weight=" << aux->peso << "];";
-                arquivo << "\n";
+            if (i < j) {
+                arquivo << " " << i << " -- " << j;
+                arquivo << " [label=" << aux->peso << ", weight=" << aux->peso << "];\n";
             }
             aux = aux->proximoVizinho;
         }
