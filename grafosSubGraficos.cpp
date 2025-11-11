@@ -7,7 +7,7 @@
 #include <fstream>  
 using namespace std;
 
-//Algoritmo de Prim
+//Algoritmo de Kruskal
 struct Vertice;
 struct Vizinho;
 
@@ -21,6 +21,14 @@ struct Vizinho {
     Vertice *vizinho;
     Vizinho *proximoVizinho;
 };
+
+struct Aresta {
+        int origem;
+        int destino;
+        int peso;
+    };
+
+Aresta *listaArestas;
 
 Vertice *grafo;
 Vertice *arvore;
@@ -37,6 +45,8 @@ void inicializa(int tamanho){
         arvore[i].id = i;
         arvore[i].vizinhos = NULL;
     }
+
+    listaArestas = new Aresta[tamanho * (tamanho - 1) / 2];
 }
 
 bool vizinhoExiste(Vertice *a, Vertice *b) {
@@ -234,34 +244,63 @@ void escreverNoArquivo(int tamanho, int tipoG){
     meuArquivo.close();
 }
 
-void arvoreGeradoraMinima(int tamanho){
-    bool *visitado = new bool[tamanho];
+void arvoreGeradoraMinimaKruskal(int tamanho) {
+    int qtdArestas = 0;
 
     for (int i = 0; i < tamanho; i++) {
-        visitado[i] = false;
+        Vizinho* aux = grafo[i].vizinhos;
+        while (aux != NULL) {
+            int j = aux->vizinho->id;
+            if (i < j) {
+                listaArestas[qtdArestas].origem = i;
+                listaArestas[qtdArestas].destino = j;
+                listaArestas[qtdArestas].peso = aux->peso;
+                qtdArestas++;
+            }
+            aux = aux->proximoVizinho;
+        }
     }
 
-    visitado[0] = true;
-    for(int j = 0; j < tamanho - 1; j++){
-        int menorPeso = 999;
-        int x = -1, y = -1;
-        for (int i = 0; i < tamanho; i++){
-            if(visitado[i]){
-                Vizinho *p = grafo[i].vizinhos;
-                while (p != NULL){
-                    if(!visitado[p->vizinho->id] && p->peso < menorPeso){
-                        menorPeso = p->peso;
-
-                        x = i;
-                        y = p->vizinho->id;
-                    }
-                    p = p->proximoVizinho;
-                }
+    for (int i = 0; i < qtdArestas - 1; i++) {
+        for (int j = i + 1; j < qtdArestas; j++) {
+            if (listaArestas[j].peso < listaArestas[i].peso) {
+                Aresta temp = listaArestas[i];
+                listaArestas[i] = listaArestas[j];
+                listaArestas[j] = temp;
             }
         }
+    }
 
-        adicionaVizinhoComPeso(&arvore[x], &arvore[y], menorPeso);
-        visitado[y] = true;
+    int subarvore[100];
+    for (int i = 0; i < tamanho; i++) {
+        subarvore[i] = i;
+    }
+
+    for (int i = 0; i < tamanho; i++) {
+        arvore[i].vizinhos = NULL;
+    }
+
+    int arestasEscolhidas = 0;
+    int pesoTotal = 0;
+    for (int i = 0; i < qtdArestas && arestasEscolhidas < tamanho - 1; i++) {
+        int u = listaArestas[i].origem;
+        int v = listaArestas[i].destino;
+        int peso = listaArestas[i].peso;
+
+        if (subarvore[u] != subarvore[v]) { 
+            adicionaVizinhoComPeso(&arvore[u], &arvore[v], peso);
+            arestasEscolhidas++;
+            pesoTotal += peso;
+
+            int antiga = subarvore[v];
+            int nova = subarvore[u];
+            for (int k = 0; k < tamanho; k++) {
+                if (subarvore[k] == antiga)
+                    subarvore[k] = nova;
+            }
+
+            cout << "Aresta escolhida: " << u << " - " << v << " (peso " << peso << ")\n";
+        }
     }
 
     ofstream arquivo("arvore_minima.dot");
@@ -283,8 +322,11 @@ void arvoreGeradoraMinima(int tamanho){
     arquivo << "}\n";
     arquivo.close();
 
-    cout << "Arvore geradora minima criada!\n";
+    cout << "\nPeso total da arvore geradora minima: " << pesoTotal << endl;
+    cout << "Arquivo 'arvore_minima.dot' criado com sucesso!\n";
+    
 }
+
 
 void ehConexo(int tamanho, int tipoG){
     bool *visitado = new bool[tamanho];
@@ -324,7 +366,7 @@ void ehConexo(int tamanho, int tipoG){
             }
     }
     
-
+}
     bool conexo = true;
     for(int i = 0; i < tamanho; i++){
         if(visitado[i] == false){
@@ -338,7 +380,7 @@ void ehConexo(int tamanho, int tipoG){
     } else {
         cout << "\nNao eh conexo!!" << endl;
     }
-    }
+    
 }
 
 
@@ -439,7 +481,7 @@ int main(){
                 break;
 
             case 6:
-                arvoreGeradoraMinima(tamLista);
+                arvoreGeradoraMinimaKruskal(tamLista);
                 break;
 
             case 0:
